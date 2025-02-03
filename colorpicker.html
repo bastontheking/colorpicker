@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Color Picker</title>
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- iro.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@jaames/iro/dist/iro.min.js"></script>
+  <style>
+    body {
+      background-color: #121212;
+    }
+    .card {
+      background-color: #1e1e1e;
+      border: none;
+    }
+    .card-header, .card-body {
+      color: #fff;
+    }
+    /* Force text-muted elements to be white */
+    .text-muted {
+      color: #fff !important;
+    }
+    #colorPreview {
+      border: 2px solid #333;
+      border-radius: 5px;
+    }
+    .copy-input {
+      cursor: pointer;
+    }
+    /* Style for our custom alpha slider */
+    #alphaSlider {
+      width: 200px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Centered container -->
+  <div class="container min-vh-100 d-flex justify-content-center align-items-center">
+    <div class="card shadow w-100" style="max-width:600px;">
+      <div class="card-header text-center">
+        <h2>Color Picker</h2>
+      </div>
+      <div class="card-body">
+        <!-- Color picker wheel container (no built-in slider) -->
+        <div id="colorPickerContainer" class="mb-3 d-flex justify-content-center"></div>
+        <!-- Custom Alpha slider and toggle container -->
+        <div class="d-flex justify-content-center align-items-center mb-3">
+          <!-- Our custom alpha slider, disabled by default -->
+          <input type="range" id="alphaSlider" min="0" max="1" step="0.01" value="1" class="form-range me-3" disabled>
+          <!-- Checkbox to enable/disable alpha, starts unchecked -->
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="enableAlpha">
+            <label class="form-check-label" for="enableAlpha">Enable Alpha</label>
+          </div>
+        </div>
+        <!-- Color preview area -->
+        <div id="colorPreview" class="mb-3" style="height:150px;"></div>
+        <!-- Display color values -->
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <p class="text-muted small text-center">HTML</p>
+            <div class="input-group">
+              <input type="text" class="form-control copy-input" id="htmlColor" readonly onclick="copyToClipboard('htmlColor')">
+            </div>
+          </div>
+          <div class="col-md-4 mb-3">
+            <p class="text-muted small text-center">RGB[A] (0-255)</p>
+            <div class="input-group">
+              <input type="text" class="form-control copy-input" id="rgb255" readonly onclick="copyToClipboard('rgb255')">
+            </div>
+          </div>
+          <div class="col-md-4 mb-3">
+            <p class="text-muted small text-center">RGB[A] (Float)</p>
+            <div class="input-group">
+              <input type="text" class="form-control copy-input" id="rgbFloat" readonly onclick="copyToClipboard('rgbFloat')">
+            </div>
+          </div>
+        </div>
+        <p class="text-muted small text-center">Click on a field to copy its value.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap Bundle JS (includes Popper) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Initialize the iro.js color picker with only the wheel (no built-in slider)
+    const colorPicker = new iro.ColorPicker("#colorPickerContainer", {
+      width: 250,
+      color: "#fafafa",
+      layout: [
+        {
+          component: iro.ui.Wheel,
+          options: {}
+        }
+      ]
+    });
+
+    // Get our custom controls
+    const alphaSlider = document.getElementById('alphaSlider');
+    const enableAlphaCheckbox = document.getElementById('enableAlpha');
+
+    // When the alpha slider changes, update the color picker's alpha (if enabled)
+    alphaSlider.addEventListener('input', () => {
+      if (enableAlphaCheckbox.checked) {
+        colorPicker.color.alpha = parseFloat(alphaSlider.value);
+      }
+      updateColorValues();
+    });
+
+    // When the checkbox is toggled, update the controls and color
+    enableAlphaCheckbox.addEventListener('change', () => {
+      if (!enableAlphaCheckbox.checked) {
+        // Force opaque: disable the slider and set alpha to 1
+        alphaSlider.disabled = true;
+        colorPicker.color.alpha = 1;
+      } else {
+        alphaSlider.disabled = false;
+        // Use the slider's value
+        colorPicker.color.alpha = parseFloat(alphaSlider.value);
+      }
+      updateColorValues();
+    });
+
+    // Update display values (preview, text fields, and animated title)
+    function updateColorValues() {
+      const { r, g, b } = colorPicker.color.rgb;
+      const a = colorPicker.color.alpha;
+      let hexValue, rgb255Val, rgbFloatVal;
+      if (enableAlphaCheckbox.checked) {
+        hexValue = colorPicker.color.hex8String.toUpperCase();
+        const alpha255 = Math.round(a * 255);
+        rgb255Val = `${r}, ${g}, ${b}, ${alpha255}`;
+        rgbFloatVal = `${(r/255).toFixed(2)}f, ${(g/255).toFixed(2)}f, ${(b/255).toFixed(2)}f, ${a.toFixed(2)}f`;
+      } else {
+        hexValue = colorPicker.color.hexString.toUpperCase();
+        rgb255Val = `${r}, ${g}, ${b}`;
+        rgbFloatVal = `${(r/255).toFixed(2)}f, ${(g/255).toFixed(2)}f, ${(b/255).toFixed(2)}f`;
+      }
+      document.getElementById("colorPreview").style.backgroundColor = hexValue;
+      document.getElementById("htmlColor").value = hexValue;
+      document.getElementById("rgb255").value = rgb255Val;
+      document.getElementById("rgbFloat").value = rgbFloatVal;
+    }
+
+    // Update values when the color picker changes
+    colorPicker.on('color:change', updateColorValues);
+    updateColorValues();
+
+    // Function to copy a field's value with a tooltip confirmation
+    function copyToClipboard(elementId) {
+      const input = document.getElementById(elementId);
+      input.select();
+      input.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(input.value)
+        .then(() => {
+          let tooltip = bootstrap.Tooltip.getInstance(input);
+          if (!tooltip) {
+            tooltip = new bootstrap.Tooltip(input, { title: "Copied!", trigger: 'manual' });
+          } else {
+            input.setAttribute('data-bs-original-title', 'Copied!');
+          }
+          tooltip.show();
+          setTimeout(() => tooltip.hide(), 1000);
+        })
+        .catch(err => console.error("Error copying:", err));
+    }
+  </script>
+</body>
+</html>
